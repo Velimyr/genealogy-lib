@@ -1,0 +1,26 @@
+{
+  "name": "genealogy-lib",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Velimyr/genealogy-lib.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Velimyr/genealogy-lib/issues"
+  },
+  "homepage": "https://github.com/Velimyr/genealogy-lib#readme",
+  "dependencies": {
+    "@azure/cosmos": "^4.5.0",
+    "botbuilder": "^4.17.0-blobs1",
+    "dotenv": "^17.2.0",
+    "restify": "^11.1.0"
+  }
+}
