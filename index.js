@@ -3,6 +3,22 @@ const { BotFrameworkAdapter, MemoryStorage, ConversationState, UserState } = req
 const { CosmosClient } = require('@azure/cosmos');
 require('dotenv').config();
 
+const requiredEnvVars = [
+    'COSMOS_DB_ENDPOINT',
+    'COSMOS_DB_KEY',
+    'COSMOS_DB_DATABASE',
+    'COSMOS_DB_CONTAINER',
+    'MICROSOFT_APP_ID',
+    'MICROSOFT_APP_PASSWORD'
+];
+
+requiredEnvVars.forEach((key) => {
+    if (!process.env[key]) {
+        console.error(`❌ Missing env variable: ${key}`);
+        process.exit(1);
+    }
+});
+
 // Ініціалізація Cosmos DB клієнта
 const cosmosClient = new CosmosClient({
     endpoint: process.env.COSMOS_DB_ENDPOINT,
@@ -37,41 +53,43 @@ adapter.onTurnError = async (context, error) => {
 
 // Простий бот, який приймає команду "add" і додає запис у Cosmos DB
 server.post('/api/messages', async (req, res) => {
-    await adapter.processActivity(req, res, async (context) => {
-        if (context.activity.type === 'message') {
-            const text = context.activity.text.trim().toLowerCase();
-//--
-            if (text.startsWith('add')) {
-                // Приклад простої логіки додавання
-                // Формат: add|title|author|year|category|region
-                const parts = context.activity.text.split('|');
-                if (parts.length === 6) {
-                    const [_, title, author, year, category, region] = parts;
-                    const newItem = {
-                        id: `${Date.now()}`,
-                        title: title.trim(),
-                        author: author.trim(),
-                        year: parseInt(year.trim()),
-                        category: category.trim(),
-                        region: region.trim(),
-                        added_by: context.activity.from.id,
-                        timestamp: new Date().toISOString(),
-                    };
+    try {
+        await adapter.processActivity(req, res, async (context) => {
+            if (context.activity.type === 'message') {
+                const text = context.activity.text.trim().toLowerCase();
+                if (text.startsWith('add')) {
+                    const parts = context.activity.text.split('|');
+                    if (parts.length === 6) {
+                        const [_, title, author, year, category, region] = parts;
+                        const newItem = {
+                            id: `${Date.now()}`,
+                            title: title.trim(),
+                            author: author.trim(),
+                            year: parseInt(year.trim()),
+                            category: category.trim(),
+                            region: region.trim(),
+                            added_by: context.activity.from.id,
+                            timestamp: new Date().toISOString(),
+                        };
 
-                    try {
-                        await container.items.create(newItem);
-                        await context.sendActivity(`Запис "${newItem.title}" додано успішно!`);
-                    } catch (err) {
-                        console.error(err);
-                        await context.sendActivity('Помилка при додаванні запису.');
+                        try {
+                            await container.items.create(newItem);
+                            await context.sendActivity(`Запис "${newItem.title}" додано успішно!`);
+                        } catch (err) {
+                            console.error(err);
+                            await context.sendActivity('Помилка при додаванні запису.');
+                        }
+                    } else {
+                        await context.sendActivity('Формат команди: add|title|author|year|category|region');
                     }
                 } else {
-                    await context.sendActivity('Формат команди: add|title|author|year|category|region');
+                    await context.sendActivity('Привіт! Щоб додати запис, надішли повідомлення у форматі:\nadd|назва|автор|рік|категорія|регіон');
                 }
-            } else {
-                await context.sendActivity('Привіт! Щоб додати запис, надішли повідомлення у форматі:\nadd|назва|автор|рік|категорія|регіон');
             }
-        }
-    });
-
+        });
+    } catch (err) {
+        console.error('❌ ПОМИЛКА у processActivity:', err);
+        res.statusCode = 500;
+        res.end();
+    }
 });
