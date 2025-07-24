@@ -39,7 +39,7 @@ server.post('/api/messages', async (req, res) => {
     await adapter.processActivity(req, res, async (context) => {
         if (context.activity.type === 'message') {
             const text = context.activity.text.trim().toLowerCase();
-
+//--
             if (text.startsWith('add')) {
                 // Приклад простої логіки додавання
                 // Формат: add|title|author|year|category|region
