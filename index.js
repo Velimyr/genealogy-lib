@@ -24,7 +24,7 @@ const userState = new UserState(memoryStorage);
 
 // Створення сервера Restify
 const server = restify.createServer();
-server.listen(process.env.port || process.env.PORT || 3978, () => {
+server.listen(process.env.PORT || 3978, () => {
     console.log(`\n${server.name} listening to ${server.url}`);
 });
 
