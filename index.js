@@ -33,12 +33,7 @@ adapter.onTurnError = async (context, error) => {
     console.error(`\n [onTurnError]: ${error}`);
     await context.sendActivity('Вибачте, сталася помилка.');
 };
-//test echo
-adapter.processActivity(req, res, async (context) => {
-    if (context.activity.type === 'message') {
-      await context.sendActivity('Привіт! Я працюю!');
-    }
-  });
+
 
 // Простий бот, який приймає команду "add" і додає запис у Cosmos DB
 server.post('/api/messages', async (req, res) => {
