@@ -31,7 +31,9 @@ const container = database.container(process.env.COSMOS_DB_CONTAINER);
 const adapter = new BotFrameworkAdapter({
     appId: process.env.MICROSOFT_APP_ID,
     appPassword: process.env.MICROSOFT_APP_PASSWORD,
-});
+}); 
+//const adapter = new BotFrameworkAdapter({});
+
 
 // Пам'ять стану
 const memoryStorage = new MemoryStorage();
@@ -55,7 +57,8 @@ adapter.onTurnError = async (context, error) => {
 server.post('/api/messages', async (req, res) => {
     try {
         await adapter.processActivity(req, res, async (context) => {
-            if (context.activity.type === 'message') {
+            console.log('Отримана активність:', JSON.stringify(context.activity, null, 2));
+            if (context.activity.type === 'message' && typeof context.activity.text === 'string') {
                 const text = context.activity.text.trim().toLowerCase();
                 if (text.startsWith('add')) {
                     const parts = context.activity.text.split('|');
@@ -85,6 +88,8 @@ server.post('/api/messages', async (req, res) => {
                 } else {
                     await context.sendActivity('Привіт! Щоб додати запис, надішли повідомлення у форматі:\nadd|назва|автор|рік|категорія|регіон');
                 }
+            } else {
+                await context.sendActivity('Очікую текстове повідомлення.');
             }
         });
     } catch (err) {
