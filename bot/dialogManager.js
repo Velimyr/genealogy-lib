@@ -3,7 +3,17 @@ const { CardFactory } = require('botbuilder');
 
 module.exports = async function handleMenu(context) {
     console.log('➡️ handleMenu тестово працює');
-    await context.sendActivity('👋 Привіт! Це тестове повідомлення без кнопок.');
+    await context.sendActivity({
+        text: 'Оберіть дію:',
+        channelData: {
+          method: 'sendMessage',
+          reply_markup: {
+            keyboard: [['📚 Меню']],
+            resize_keyboard: true,
+            one_time_keyboard: false
+          }
+        }
+      });
   };
 
 /* module.exports = async function handleMenu(context, text) {
