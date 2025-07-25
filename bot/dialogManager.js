@@ -2,7 +2,9 @@
 const { CardFactory } = require('botbuilder');
 
 module.exports = async function handleMenu(context, text) {
+  console.log('➡️ handleMenu викликано для каналу:', context.activity.channelId);
   if (context.activity.channelId === 'telegram') {
+    console.log('📤 Надсилаємо меню...');
     await context.sendActivity({
       text: 'Оберіть дію:',
       channelData: {
@@ -29,6 +31,7 @@ module.exports = async function handleMenu(context, text) {
         { type: 'imBack', title: '📎 Інше', value: 'Інше' }
       ]
     );
+    console.log('📤 Надсилаємо меню...');
     await context.sendActivity({ attachments: [card] });
   }
 };
