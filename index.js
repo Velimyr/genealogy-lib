@@ -2,6 +2,9 @@ const restify = require('restify');
 const { BotFrameworkAdapter, MemoryStorage, ConversationState, UserState } = require('botbuilder');
 const { CosmosClient } = require('@azure/cosmos');
 require('dotenv').config();
+const handleMenu = require('./bot/dialogManager');
+const handleAdd = require('./bot/addHandler');
+const container = require('./services/db');
 
 const requiredEnvVars = [
     'COSMOS_DB_ENDPOINT',
@@ -19,13 +22,6 @@ requiredEnvVars.forEach((key) => {
     }
 });
 
-// Ініціалізація Cosmos DB клієнта
-const cosmosClient = new CosmosClient({
-    endpoint: process.env.COSMOS_DB_ENDPOINT,
-    key: process.env.COSMOS_DB_KEY,
-});
-const database = cosmosClient.database(process.env.COSMOS_DB_DATABASE);
-const container = database.container(process.env.COSMOS_DB_CONTAINER);
 
 // Ініціалізація адаптера Bot Framework
 const adapter = new BotFrameworkAdapter({
@@ -60,31 +56,10 @@ server.post('/api/messages', async (req, res) => {
             console.log('Отримана активність:', JSON.stringify(context.activity, null, 2));
             if (context.activity.type === 'message' && typeof context.activity.text === 'string') {
                 const text = context.activity.text.trim().toLowerCase();
-                if (text.startsWith('add')) {
-                    const parts = context.activity.text.split('|');
-                    if (parts.length === 6) {
-                        const [_, title, author, year, category, region] = parts;
-                        const newItem = {
-                            id: `${Date.now()}`,
-                            title: title.trim(),
-                            author: author.trim(),
-                            year: parseInt(year.trim()),
-                            category: category.trim(),
-                            region: region.trim(),
-                            added_by: context.activity.from.id,
-                            timestamp: new Date().toISOString(),
-                        };
-
-                        try {
-                            await container.items.create(newItem);
-                            await context.sendActivity(`Запис "${newItem.title}" додано успішно!`);
-                        } catch (err) {
-                            console.error(err);
-                            await context.sendActivity('Помилка при додаванні запису.');
-                        }
-                    } else {
-                        await context.sendActivity('Формат команди: add|title|author|year|category|region');
-                    }
+                if (text === '/start' || text === 'меню') {
+                    await handleMenu(context, text);
+                } else if (text.startsWith('add')) {
+                    await handleAdd(context);
                 } else {
                     await context.sendActivity('Привіт! Щоб додати запис, надішли повідомлення у форматі:\nadd|назва|автор|рік|категорія|регіон');
                 }
