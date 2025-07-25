@@ -1,7 +1,12 @@
 // bot/dialogManager.js
 const { CardFactory } = require('botbuilder');
 
-module.exports = async function handleMenu(context, text) {
+module.exports = async function handleMenu(context) {
+    console.log('➡️ handleMenu тестово працює');
+    await context.sendActivity('👋 Привіт! Це тестове повідомлення без кнопок.');
+  };
+
+/* module.exports = async function handleMenu(context, text) {
   console.log('➡️ handleMenu викликано для каналу:', context.activity.channelId);
   if (context.activity.channelId === 'telegram') {
     console.log('📤 Надсилаємо меню...');
@@ -34,4 +39,4 @@ module.exports = async function handleMenu(context, text) {
     console.log('📤 Надсилаємо меню...');
     await context.sendActivity({ attachments: [card] });
   }
-};
+}; */
