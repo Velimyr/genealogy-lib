@@ -54,6 +54,15 @@ server.post('/api/messages', async (req, res) => {
     try {
         await adapter.processActivity(req, res, async (context) => {
             console.log('Отримана активність:', JSON.stringify(context.activity, null, 2));
+            if (context.activity.type === 'conversationUpdate') {
+                const membersAdded = context.activity.membersAdded || [];
+                for (let member of membersAdded) {
+                    if (member.id !== context.activity.recipient.id) {
+                        await handleMenu(context, '/start');
+                    }
+                }
+                return;
+            }
             if (context.activity.type === 'message' && typeof context.activity.text === 'string') {
                 const text = context.activity.text.trim().toLowerCase();
                 if (text === '/start' || text === 'меню') {
