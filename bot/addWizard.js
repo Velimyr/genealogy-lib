@@ -259,13 +259,18 @@ async function handleWizardStep(context) {
         case 8:
             if (context.activity.attachments && context.activity.attachments.length > 0) {
                 const attachment = context.activity.attachments[0];
-                // Перевірка наявності вже доданого файлу та перевірка розширення
+                // Перевірка наявності вже доданого файлу та перевірка розміру і розширення
                 const allowedExtensions = ['.pdf', '.djvu', '.epub', '.mobi', '.azw', '.azw3', '.fb2', '.doc', '.docx', '.odt'];
                 const filename = attachment.name || '';
                 const extension = filename.slice(filename.lastIndexOf('.')).toLowerCase();
 
                 if (session.fileAttachment) {
                     await context.sendActivity('❗ Ви вже завантажили файл. Можна додати лише один документ.');
+                    return true;
+                }
+
+                if (attachment.contentSize > 50 * 1024 * 1024) {
+                    await context.sendActivity('❗ Розмір файлу перевищує 50MB. Завантажте менший файл або додайте посилання.');
                     return true;
                 }
 
@@ -387,16 +392,20 @@ async function handleWizardStep(context) {
                             const fileBuffer = await getFileBuffer(session.fileAttachment.contentUrl);
                             const tgFileInfo = await publishFileToTelegramChannel(fileBuffer, session.fileAttachment, confirmText);
                             materialData.fileAttachment = {
-                                telegramFileLink: tgFileInfo?.telegramFileLink || null,
+                                fileId: tgFileInfo?.fileId || null,
                                 name: session.fileAttachment.name || null
                             };
+                            materialData.telegramChannelLink = tgFileInfo?.telegramMessageLink || null;
                         } catch (err) {
                             await context.sendActivity('❌ Не вдалося опублікувати файл у канал. Спробуйте пізніше або додайте матеріал без файлу.');
                             return true;
                         }
                     }
                     else if (session.link) {
-                        await publishMaterialCard(materialData);
+                        const cardInfo = await publishMaterialCard(materialData);
+                        materialData.telegramChannelLink = cardInfo
+                            ? `https://t.me/c/${String(cardInfo.chatId).replace('-100', '')}/${cardInfo.messageId}`
+                            : null;
                     }
                     await saveMaterial(materialData);
                     resetSession(userId);

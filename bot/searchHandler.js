@@ -18,19 +18,54 @@ module.exports = async function handleSearch(context, searchQuery) {
   );
 
   for (const chunk of chunks) {
-    const lines = chunk.map(mat => {
+    const attachments = chunk.map(mat => {
       const original = mat.originalTitle || 'Без назви';
       const ukr = mat.ukrTitle || '';
       const author = mat.author || 'Без автора';
-      const id = mat.id || '';
-      return `📘 ${original} ${ukr ? `(${ukr})` : ''} — ${author}\n[Детальніше](https://t.me/genealogy_ukr_bot?start=details_${id})`;
+      const telegramChannelLink = mat.telegramChannelLink || null;
+
+      const buttons = [];
+
+      if (telegramChannelLink) {
+        buttons.push({
+          type: 'openUrl',
+          title: 'Детальніше',
+          value: telegramChannelLink,
+        });
+      }
+
+      return {
+        contentType: 'application/vnd.microsoft.card.hero',
+        content: {
+          title: `${original} ${ukr ? `(${ukr})` : ''}`,
+          subtitle: author,
+          buttons: buttons
+        }
+      };
     });
 
     await context.sendActivity({
-      text: lines.join('\n\n'),
-      markdown: true
+      attachments: attachments,
+      attachmentLayout: 'carousel',
     });
   }
 
+  await context.sendActivity({
+    text: 'Натисніть кнопку нижче, щоб повернутися в головне меню.',
+    attachments: [
+      {
+        contentType: 'application/vnd.microsoft.card.hero',
+        content: {
+          buttons: [
+            {
+              type: 'imBack',
+              title: 'Головне меню',
+              value: 'меню'
+            }
+          ]
+        }
+      }
+    ]
+  });
   return true;
 };

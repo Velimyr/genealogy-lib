@@ -120,7 +120,8 @@ async function publishFileToTelegramChannel(fileBuffer, fileAttachment, caption 
         fileId: data.result.document.file_id,
         fileName: data.result.document.file_name,
         mimeType: data.result.document.mime_type,
-        telegramFileLink: telegramFileLink
+        telegramFileLink: telegramFileLink,
+        telegramMessageLink: `https://t.me/c/${String(data.result.chat.id).replace('-100', '')}/${data.result.message_id}`
     };
 }
 
