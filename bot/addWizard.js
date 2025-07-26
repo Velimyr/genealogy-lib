@@ -20,6 +20,22 @@ async function startWizard(context) {
     });
 }
 
+// Динамічний імпорт node-fetch
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+// Завантаження буфера файлу з contentUrl
+async function getFileBuffer(contentUrl) {
+    console.log('[DEBUG] Завантаження файлу з URL:', contentUrl);
+    const response = await fetch(contentUrl);
+    if (!response.ok) {
+        console.error('[ERROR] Не вдалося завантажити файл. Код:', response.status, response.statusText);
+        throw new Error('Не вдалося завантажити файл');
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    console.log('[DEBUG] Розмір буфера (байт):', arrayBuffer.byteLength);
+    return Buffer.from(arrayBuffer);
+}
+
 async function handleWizardStep(context) {
     const userId = context.activity.from.id;
     const session = getSession(userId);
@@ -239,7 +255,6 @@ async function handleWizardStep(context) {
                 await context.sendActivity('❗ Введено некоректний URL. Спробуйте ще раз.');
                 return true;
             }
-            // Valid link: store and proceed immediately to confirmation (step 9)
             session.link = text;
             session.step = 9;
             return await handleWizardStep(context);
@@ -247,6 +262,7 @@ async function handleWizardStep(context) {
             console.log('[DEBUG] activity at step 8:', JSON.stringify(context.activity, null, 2));
             if (context.activity.attachments && context.activity.attachments.length > 0) {
                 const attachment = context.activity.attachments[0];
+                console.log('[DEBUG] contentUrl вкладення:', attachment.contentUrl);
                 session.fileAttachment = {
                     name: attachment.name,
                     contentType: attachment.contentType,
@@ -285,18 +301,17 @@ async function handleWizardStep(context) {
             await context.sendActivity('❗ Будь ласка, надішліть файл.');
             return true;
         case 9:
-            // Завжди оголошуємо confirmText на початку кейса, щоб він був визначений для всіх гілок нижче
-            let confirmText = `📚 Додано новий матеріал:\n`;
-            confirmText += `• Назва (оригінал): ${session.originalTitle}\n`;
-            confirmText += `• Назва (укр.): ${session.ukrTitle}\n`;
-            confirmText += `• Автор: ${session.author}\n`;
-            confirmText += `• Категорія: ${session.category}\n`;
-            confirmText += `• Корисність: ${session.usefulness}\n`;
+            let confirmText = `📚 Додано новий матеріал\n`;
+            confirmText += `• Назва оригінал - ${session.originalTitle}\n`;
+            confirmText += `• Назва укр.-  ${session.ukrTitle}\n`;
+            confirmText += `• Автор - ${session.author}\n`;
+            confirmText += `• Категорія - ${session.category}\n`;
+            confirmText += `• Корисність - ${session.usefulness}\n`;
             if (session.link) {
-                confirmText += `• Посилання: ${session.link}\n`;
+                confirmText += `• Посилання - ${session.link}\n`;
             }
             if (session.fileAttachment) {
-                confirmText += `• Файл: ${session.fileAttachment.name || 'Документ'}\n`;
+                confirmText += `• Файл - ${session.fileAttachment.name || 'Документ'}\n`;
             }
             if (lowerText === 'назад') {
                 if (session.link) {
@@ -342,9 +357,12 @@ async function handleWizardStep(context) {
                     };
 
                     if (session.fileAttachment) {
+                        console.log('[DEBUG] Починається публікація файлу в Telegram');
+                        console.log('[DEBUG] Імʼя файлу:', session.fileAttachment.name);
+                        console.log('[DEBUG] URL контенту:', session.fileAttachment.contentUrl);
                         try {
-                            // publishFileToTelegramChannel повертає telegramFileLink, і публікує з описом
-                            const tgFileInfo = await publishFileToTelegramChannel(session.fileAttachment, confirmText);
+                            const fileBuffer = await getFileBuffer(session.fileAttachment.contentUrl);
+                            const tgFileInfo = await publishFileToTelegramChannel(fileBuffer, session.fileAttachment, confirmText);
                             materialData.fileAttachment = {
                                 telegramFileLink: tgFileInfo?.telegramFileLink || null,
                                 name: session.fileAttachment.name || null
@@ -354,11 +372,10 @@ async function handleWizardStep(context) {
                             await context.sendActivity('❌ Не вдалося опублікувати файл у канал. Спробуйте пізніше або додайте матеріал без файлу.');
                             return true;
                         }
-                    } else if (session.link) {
-                        // Якщо є тільки посилання, публікуємо картку з описом
+                    }
+                    else if (session.link) {
                         await publishMaterialCard(materialData);
                     }
-
                     await saveMaterial(materialData);
                     resetSession(userId);
                     await context.sendActivity('✅ Книга/стаття успішно додана!');

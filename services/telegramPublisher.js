@@ -1,5 +1,6 @@
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const FormData = require('form-data');
+const { Readable } = require('stream');
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
@@ -7,18 +8,18 @@ const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
 // Існуюча функція для публікації текстової картки
 async function publishMaterialCard(session) {
     const lines = [
-        '📚 *Додано новий матеріал:*',
-        `• Назва (оригінал): *${session.originalTitle}*`,
-        `• Назва (укр.): *${session.ukrTitle}*`,
-        `• Автор: *${session.author}*`,
-        `• Категорія: *${session.category}*`,
-        `• Корисність: *${session.usefulness}*`,
+        '📚 Додано новий матеріал',
+        `• Назва оригінал - ${session.originalTitle}`,
+        `• Назва укр. -  ${session.ukrTitle}`,
+        `• Автор - ${session.author}`,
+        `• Категорія - ${session.category}`,
+        `• Корисність - ${session.usefulness}`,
     ];
 
     if (session.link) {
-        lines.push(`• Посилання: [Перейти до матеріалу](${session.link})`);
+        lines.push(`• Посилання - [Перейти до матеріалу]${session.link}`);
     } else if (session.fileAttachment?.name) {
-        lines.push(`• Файл: *${session.fileAttachment.name}*`);
+        lines.push(`• Файл - ${session.fileAttachment.name}`);
     }
 
     const text = lines.join('\n');
@@ -26,7 +27,7 @@ async function publishMaterialCard(session) {
     const payload = {
         chat_id: TELEGRAM_CHANNEL_ID,
         text,
-        parse_mode: 'Markdown'
+        parse_mode: undefined
     };
 
     const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -47,36 +48,57 @@ async function publishMaterialCard(session) {
 }
 
 // Оновлена функція для публікації файлу в канал Telegram
-async function publishFileToTelegramChannel(fileAttachment, caption = '') {
-    if (!fileAttachment || !fileAttachment.contentUrl) {
-        throw new Error("fileAttachment or fileAttachment.contentUrl is undefined");
+async function publishFileToTelegramChannel(fileBuffer, fileAttachment, caption = '') {
+    if (!fileBuffer || !fileAttachment) {
+        console.error('[ERROR] Відсутній буфер або вкладення:', { fileBuffer, fileAttachment });
+        throw new Error("fileBuffer або fileAttachment не передано");
     }
-    const response = await fetch(fileAttachment.contentUrl);
-    if (!response.ok) {
-        throw new Error(`Не вдалося завантажити файл з ${fileAttachment.contentUrl}`);
-    }
-    const fileBuffer = await response.buffer();
 
-    // Формуємо multipart/form-data
+    if (!Buffer.isBuffer(fileBuffer)) {
+        throw new Error("fileBuffer повинен бути Buffer");
+    }
+
+    console.log(`Відправляємо файл "${fileAttachment.name}" розміром ${fileBuffer.length} байт до Telegram`);
+
     const form = new FormData();
     form.append('chat_id', TELEGRAM_CHANNEL_ID);
     form.append('document', fileBuffer, {
-        filename: fileAttachment.name,
-        contentType: fileAttachment.contentType
+        filename: fileAttachment.name || 'file',
+        contentType: fileAttachment.contentType || 'application/octet-stream'
     });
     if (caption) {
         form.append('caption', caption);
-        form.append('parse_mode', 'Markdown');
     }
 
-    // Відправляємо документ
+    const headers = form.getHeaders();
+    headers['Content-Length'] = await new Promise((resolve, reject) => {
+        form.getLength((err, length) => {
+            if (err) reject(err);
+            else resolve(length);
+        });
+    });
+
     const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`, {
         method: 'POST',
         body: form,
-        headers: form.getHeaders()
+        headers
     });
 
-    const data = await res.json();
+    const textBody = await res.text();
+    console.log('[DEBUG] Відповідь від Telegram (textBody):', textBody);
+
+    if (!res.ok) {
+        throw new Error(`Telegram API error: ${res.status} ${res.statusText} - ${textBody}`);
+    }
+
+    let data;
+    try {
+        data = JSON.parse(textBody);
+    } catch (e) {
+        console.error('[ERROR] Неможливо розпарсити JSON:', e.message);
+        throw new Error(`Invalid JSON response from Telegram API: ${e.message}`);
+    }
+
     if (!data.ok) {
         throw new Error(`Telegram error: ${JSON.stringify(data)}`);
     }
@@ -91,13 +113,12 @@ async function publishFileToTelegramChannel(fileAttachment, caption = '') {
         if (fileData.ok) {
             const filePath = fileData.result.file_path;
             telegramFileLink = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${filePath}`;
+        } else {
+            console.error('[ERROR] Не вдалося отримати шлях до файлу Telegram:', fileData);
         }
     }
 
-    // Присвоюємо telegramFileLink у властивість fileAttachment, якщо таке існує
-    if (fileAttachment) {
-        fileAttachment.telegramFileLink = telegramFileLink;
-    }
+    fileAttachment.telegramFileLink = telegramFileLink;
 
     return {
         messageId: data.result.message_id,
