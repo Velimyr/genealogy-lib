@@ -25,14 +25,11 @@ const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fet
 
 // Завантаження буфера файлу з contentUrl
 async function getFileBuffer(contentUrl) {
-    console.log('[DEBUG] Завантаження файлу з URL:', contentUrl);
     const response = await fetch(contentUrl);
     if (!response.ok) {
-        console.error('[ERROR] Не вдалося завантажити файл. Код:', response.status, response.statusText);
         throw new Error('Не вдалося завантажити файл');
     }
     const arrayBuffer = await response.arrayBuffer();
-    console.log('[DEBUG] Розмір буфера (байт):', arrayBuffer.byteLength);
     return Buffer.from(arrayBuffer);
 }
 
@@ -47,6 +44,7 @@ async function handleWizardStep(context) {
     if (lowerText === 'відмінити') {
         resetSession(userId);
         await context.sendActivity('❌ Додавання скасовано.');
+        await handleMenu(context);
         return true;
     }
 
@@ -259,10 +257,8 @@ async function handleWizardStep(context) {
             session.step = 9;
             return await handleWizardStep(context);
         case 8:
-            console.log('[DEBUG] activity at step 8:', JSON.stringify(context.activity, null, 2));
             if (context.activity.attachments && context.activity.attachments.length > 0) {
                 const attachment = context.activity.attachments[0];
-                console.log('[DEBUG] contentUrl вкладення:', attachment.contentUrl);
                 session.fileAttachment = {
                     name: attachment.name,
                     contentType: attachment.contentType,
@@ -357,9 +353,6 @@ async function handleWizardStep(context) {
                     };
 
                     if (session.fileAttachment) {
-                        console.log('[DEBUG] Починається публікація файлу в Telegram');
-                        console.log('[DEBUG] Імʼя файлу:', session.fileAttachment.name);
-                        console.log('[DEBUG] URL контенту:', session.fileAttachment.contentUrl);
                         try {
                             const fileBuffer = await getFileBuffer(session.fileAttachment.contentUrl);
                             const tgFileInfo = await publishFileToTelegramChannel(fileBuffer, session.fileAttachment, confirmText);
@@ -368,7 +361,6 @@ async function handleWizardStep(context) {
                                 name: session.fileAttachment.name || null
                             };
                         } catch (err) {
-                            console.error('Помилка при публікації файлу у Telegram-канал:', err);
                             await context.sendActivity('❌ Не вдалося опублікувати файл у канал. Спробуйте пізніше або додайте матеріал без файлу.');
                             return true;
                         }
@@ -381,7 +373,6 @@ async function handleWizardStep(context) {
                     await context.sendActivity('✅ Книга/стаття успішно додана!');
                     await handleMenu(context);
                 } catch (err) {
-                    console.error('Помилка при додаванні матеріалу:', err);
                     await context.sendActivity('❌ Сталася помилка під час додавання. Спробуйте пізніше.');
                     await handleMenu(context);
                 }

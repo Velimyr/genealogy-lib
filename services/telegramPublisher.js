@@ -17,7 +17,7 @@ async function publishMaterialCard(session) {
     ];
 
     if (session.link) {
-        lines.push(`• Посилання - [Перейти до матеріалу]${session.link}`);
+        lines.push(`• Посилання - ${session.link}`);
     } else if (session.fileAttachment?.name) {
         lines.push(`• Файл - ${session.fileAttachment.name}`);
     }
@@ -49,17 +49,13 @@ async function publishMaterialCard(session) {
 
 // Оновлена функція для публікації файлу в канал Telegram
 async function publishFileToTelegramChannel(fileBuffer, fileAttachment, caption = '') {
-    if (!fileBuffer || !fileAttachment) {
-        console.error('[ERROR] Відсутній буфер або вкладення:', { fileBuffer, fileAttachment });
+    if (!fileBuffer || !fileAttachment) { 
         throw new Error("fileBuffer або fileAttachment не передано");
     }
 
     if (!Buffer.isBuffer(fileBuffer)) {
         throw new Error("fileBuffer повинен бути Buffer");
     }
-
-    console.log(`Відправляємо файл "${fileAttachment.name}" розміром ${fileBuffer.length} байт до Telegram`);
-    console.log('[DEBUG] Telegram API URL:', `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`);
 
     const form = new FormData();
     form.append('chat_id', TELEGRAM_CHANNEL_ID);
@@ -86,7 +82,6 @@ async function publishFileToTelegramChannel(fileBuffer, fileAttachment, caption 
     });
 
     const textBody = await res.text();
-    console.log('[DEBUG] Відповідь від Telegram (textBody):', textBody);
 
     if (!res.ok) {
         throw new Error(`Telegram API error: ${res.status} ${res.statusText} - ${textBody}`);
@@ -96,7 +91,6 @@ async function publishFileToTelegramChannel(fileBuffer, fileAttachment, caption 
     try {
         data = JSON.parse(textBody);
     } catch (e) {
-        console.error('[ERROR] Неможливо розпарсити JSON:', e.message);
         throw new Error(`Invalid JSON response from Telegram API: ${e.message}`);
     }
 
@@ -115,7 +109,6 @@ async function publishFileToTelegramChannel(fileBuffer, fileAttachment, caption 
             const filePath = fileData.result.file_path;
             telegramFileLink = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${filePath}`;
         } else {
-            console.error('[ERROR] Не вдалося отримати шлях до файлу Telegram:', fileData);
         }
     }
 
