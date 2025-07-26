@@ -17,7 +17,28 @@ async function saveMaterial(material) {
   return resource;
 }
 
+
+async function findMaterials(query) {
+  const q = query.toLowerCase();
+
+  const sqlQuery = {
+    query: `
+      SELECT * FROM c
+      WHERE CONTAINS(LOWER(c.originalTitle), @q)
+        OR CONTAINS(LOWER(c.ukrTitle), @q)
+        OR CONTAINS(LOWER(c.author), @q)
+        OR CONTAINS(LOWER(c.category), @q)
+        OR CONTAINS(LOWER(c.usefulness), @q)
+    `,
+    parameters: [{ name: '@q', value: q }]
+  };
+
+  const { resources } = await container.items.query(sqlQuery).fetchAll();
+  return resources;
+}
+
 module.exports = {
   container,
   saveMaterial,
+  findMaterials,
 };
