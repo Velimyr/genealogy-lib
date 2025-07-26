@@ -144,7 +144,7 @@ async function handleWizardStep(context) {
             session.category = text;
             session.step = 5;
             await context.sendActivity({
-                text: '🧭 Введіть корисність для дослідника:',
+                text: '🧭 Коротко опишіть корисність цього матеріалу для дослідників:',
                 suggestedActions: {
                     actions: [
                         { type: 'imBack', title: 'Назад', value: 'Назад' },
@@ -191,7 +191,7 @@ async function handleWizardStep(context) {
             if (lowerText === 'назад') {
                 session.step = 5;
                 await context.sendActivity({
-                    text: '🧭 Введіть корисність для дослідника:',
+                    text: '🧭 Коротко опишіть корисність цього матеріалу для дослідників:',
                     suggestedActions: {
                         actions: [
                             { type: 'imBack', title: 'Назад', value: 'Назад' },
@@ -259,23 +259,53 @@ async function handleWizardStep(context) {
         case 8:
             if (context.activity.attachments && context.activity.attachments.length > 0) {
                 const attachment = context.activity.attachments[0];
+                // Перевірка наявності вже доданого файлу та перевірка розширення
+                const allowedExtensions = ['.pdf', '.djvu', '.epub', '.mobi', '.azw', '.azw3', '.fb2', '.doc', '.docx', '.odt'];
+                const filename = attachment.name || '';
+                const extension = filename.slice(filename.lastIndexOf('.')).toLowerCase();
+
+                if (session.fileAttachment) {
+                    await context.sendActivity('❗ Ви вже завантажили файл. Можна додати лише один документ.');
+                    return true;
+                }
+
+                if (!allowedExtensions.includes(extension)) {
+                    await context.sendActivity('❗ Недопустимий тип файлу. Підтримуються тільки документи: PDF, DjVu, EPUB, MOBI, FB2, DOC(X), ODT.');
+                    return true;
+                }
+
                 session.fileAttachment = {
                     name: attachment.name,
                     contentType: attachment.contentType,
                     contentUrl: attachment.contentUrl
                 };
                 session.step = 9;
+                // Показати картку з усіма даними (аналогічно до case 9), з кнопкою "Додати матеріал"
+                let confirmText = `📄 Перевірте дані перед додаванням:\n`;
+                confirmText += `• Назва оригінал - ${session.originalTitle}\n`;
+                confirmText += `• Назва укр.-  ${session.ukrTitle}\n`;
+                confirmText += `• Автор - ${session.author}\n`;
+                confirmText += `• Категорія - ${session.category}\n`;
+                confirmText += `• Корисність - ${session.usefulness}\n`;
+                if (session.link) {
+                    confirmText += `• Посилання - ${session.link}\n`;
+                }
+                if (session.fileAttachment) {
+                    confirmText += `• Файл - ${session.fileAttachment.name || 'Документ'}\n`;
+                }
                 await context.sendActivity({
-                    text: '📄 Файл прийнято. Перевіряємо дані...',
+                    text: confirmText,
+                    textFormat: 'xml',
                     suggestedActions: {
                         actions: [
-                            { type: 'imBack', title: 'Підтвердити', value: 'Підтвердити' },
+                            { type: 'imBack', title: 'Додати матеріал', value: 'Додати матеріал' },
                             { type: 'imBack', title: 'Назад', value: 'Назад' },
                             { type: 'imBack', title: 'Відмінити', value: 'Відмінити' }
                         ],
                         to: [context.activity.from.id]
                     }
                 });
+                // handleWizardStep(context) для обробки наступного кроку (case 9)
                 return true;
             }
             if (lowerText === 'назад') {
@@ -297,7 +327,7 @@ async function handleWizardStep(context) {
             await context.sendActivity('❗ Будь ласка, надішліть файл.');
             return true;
         case 9:
-            let confirmText = `📚 Додано новий матеріал\n`;
+            let confirmText = `📚 Додано новий матеріал:\n`;
             confirmText += `• Назва оригінал - ${session.originalTitle}\n`;
             confirmText += `• Назва укр.-  ${session.ukrTitle}\n`;
             confirmText += `• Автор - ${session.author}\n`;
@@ -338,7 +368,7 @@ async function handleWizardStep(context) {
                     return true;
                 }
             }
-            if (lowerText === 'підтвердити' || lowerText === 'далі') {
+            if (lowerText === 'додати матеріал' || lowerText === 'далі') {
                 try {
                     let materialData = {
                         originalTitle: session.originalTitle,
@@ -383,7 +413,7 @@ async function handleWizardStep(context) {
                 textFormat: 'xml',
                 suggestedActions: {
                     actions: [
-                        { type: 'imBack', title: 'Підтвердити', value: 'Підтвердити' },
+                        { type: 'imBack', title: 'Додати матеріал', value: 'Додати матеріал' },
                         { type: 'imBack', title: 'Назад', value: 'Назад' },
                         { type: 'imBack', title: 'Відмінити', value: 'Відмінити' }
                     ],
