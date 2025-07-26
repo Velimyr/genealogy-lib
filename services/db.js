@@ -10,4 +10,14 @@ const client = new CosmosClient({
 const database = client.database(process.env.COSMOS_DB_DATABASE);
 const container = database.container(process.env.COSMOS_DB_CONTAINER);
 
-module.exports = container;
+async function saveMaterial(material) {
+  const { resource } = await container.items.create(material, {
+    partitionKey: material.created_by,
+  });
+  return resource;
+}
+
+module.exports = {
+  container,
+  saveMaterial,
+};

@@ -16,9 +16,9 @@ module.exports = async function handleMenu(context) {
     ]
   );
 
-  await context.sendActivity({
-    text: '📚 Це меню дій. Натисни кнопку або введи команду вручну:',
-  });
+  //await context.sendActivity({
+   // text: '📚 Це меню дій. Натисни кнопку або введи команду вручну:',
+  //});
 
   await context.sendActivity({ attachments: [card] });
 };

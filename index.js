@@ -4,6 +4,7 @@ const { CosmosClient } = require('@azure/cosmos');
 require('dotenv').config();
 const handleMenu = require('./bot/dialogManager');
 const handleAdd = require('./bot/addHandler');
+const { handleWizardStep } = require('./bot/addWizard'); // новий імпорт
 const container = require('./services/db');
 
 const requiredEnvVars = [
@@ -63,17 +64,27 @@ server.post('/api/messages', async (req, res) => {
                 }
                 return;
             }
-            if (context.activity.type === 'message' && typeof context.activity.text === 'string') {
-                const text = context.activity.text.trim().toLowerCase();
+            if (context.activity.type === 'message') {
+                const handled = await handleWizardStep(context); // обробка кроків wizard
+                if (handled) return;
+
+                // додаткове переривання — якщо повідомлення містить вкладення або посилання, не продовжуємо
+                const text = context.activity.text?.trim().toLowerCase();
+                const hasUrl = text && text.match(/https?:\/\/\S+/);
+                const hasAttachment = context.activity.attachments?.length > 0;
+                if (hasUrl || hasAttachment) return;
+
                 if (text === '/start' || text === 'меню') {
                     await handleMenu(context, text);
-                } else if (text.startsWith('add')) {
+                } else if (text === 'додати книгу') {
                     await handleAdd(context);
-                } else {
+                } else if (text?.startsWith('add')) {
+                    await handleAdd(context);
+                } else if (text) {
                     await context.sendActivity('Привіт! Щоб додати запис, надішли повідомлення у форматі:\nadd|назва|автор|рік|категорія|регіон');
+                } else {
+                    await context.sendActivity('Очікую текстове повідомлення або вкладення.');
                 }
-            } else {
-                await context.sendActivity('Очікую текстове повідомлення.');
             }
         });
     } catch (err) {
