@@ -246,7 +246,12 @@ async function handleWizardStep(context) {
         case 8:
             console.log('[DEBUG] activity at step 8:', JSON.stringify(context.activity, null, 2));
             if (context.activity.attachments && context.activity.attachments.length > 0) {
-                session.fileAttachment = context.activity.attachments[0];
+                const attachment = context.activity.attachments[0];
+                session.fileAttachment = {
+                    name: attachment.name,
+                    contentType: attachment.contentType,
+                    contentUrl: attachment.contentUrl
+                };
                 session.step = 9;
                 await context.sendActivity({
                     text: '📄 Файл прийнято. Перевіряємо дані...',
