@@ -59,6 +59,7 @@ async function publishFileToTelegramChannel(fileBuffer, fileAttachment, caption 
     }
 
     console.log(`Відправляємо файл "${fileAttachment.name}" розміром ${fileBuffer.length} байт до Telegram`);
+    console.log('[DEBUG] Telegram API URL:', `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`);
 
     const form = new FormData();
     form.append('chat_id', TELEGRAM_CHANNEL_ID);
