@@ -56,6 +56,7 @@ module.exports = async function handleSearch(context, searchQuery) {
     await context.sendActivity({
       attachments: attachments,
       attachmentLayout: 'carousel',
+      textFormat: 'plain'
     });
   }
 
