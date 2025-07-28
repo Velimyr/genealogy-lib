@@ -9,7 +9,10 @@ module.exports = async function handleSearch(context, searchQuery) {
   const results = await findMaterials(query);
 
   if (!results.length) {
-    await context.sendActivity('❌ Нічого не знайдено. Спробуйте іншу фразу.');
+    await context.sendActivity({
+      text: '❌ Нічого не знайдено. Спробуйте іншу фразу.',
+      textFormat: 'plain'
+    });
     return true;
   }
 
@@ -52,6 +55,7 @@ module.exports = async function handleSearch(context, searchQuery) {
 
   await context.sendActivity({
     text: 'Натисніть кнопку нижче, щоб повернутися в головне меню.',
+    textFormat: 'plain',
     attachments: [
       {
         contentType: 'application/vnd.microsoft.card.hero',
