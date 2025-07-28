@@ -4,9 +4,13 @@ const { findMaterials } = require('../services/db');
 module.exports = async function handleSearch(context, searchQuery) {
   if (!searchQuery) return false;
 
+  console.log('[handleSearch] Отримано пошуковий запит:', searchQuery);
+
   const query = searchQuery.toLowerCase();
 
   const results = await findMaterials(query);
+
+  console.log('[handleSearch] Знайдено результатів:', results.length);
 
   if (!results.length) {
     await context.sendActivity({
@@ -37,6 +41,8 @@ module.exports = async function handleSearch(context, searchQuery) {
         });
       }
 
+      console.log('[handleSearch] Формується картка для:', original, ukr, author);
+
       return {
         contentType: 'application/vnd.microsoft.card.hero',
         content: {
@@ -52,6 +58,8 @@ module.exports = async function handleSearch(context, searchQuery) {
       attachmentLayout: 'carousel',
     });
   }
+
+  console.log('[handleSearch] Завершено відправку результатів, додаємо кнопку "Головне меню"');
 
   await context.sendActivity({
     text: 'Натисніть кнопку нижче, щоб повернутися в головне меню.',
